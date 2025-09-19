@@ -6,7 +6,7 @@ import './output.css';
 
 // Configure axios defaults
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = 'http://localhost:3001';
+axios.defaults.baseURL = 'https://youtube-channel-analyzer.onrender.com';
 
 function App() {
   const [user, setUser] = useState(null);
