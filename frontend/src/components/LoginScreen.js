@@ -4,7 +4,7 @@ import '../output.css';
 const LoginScreen = () => {
   const handleGoogleLogin = () => {
     // Redirect to backend Google OAuth route
-    window.location.href = 'http://localhost:3001/auth/google';
+    window.location.href = 'https://youtube-channel-analyzer.onrender.com/auth/google';
   };
 
   return (
