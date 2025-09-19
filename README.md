@@ -73,7 +73,10 @@
  5. **Set window.location.href in LoginScreen.js**
    - Set window.location.href = 'https://localhost:3001/auth/google'
 
- 6. **Start the Servers:**
+ 6. **Add 'uploads' directory to Backend**
+   - Add an empty 'uploads' directory in Backend directory 
+ 
+ 8. **Start the Servers:**
    ```bash
    # Terminal 1 - Backend (runs on port 3001)
    cd Backend
