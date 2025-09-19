@@ -52,7 +52,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: true, // Set to true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'none' // Set to 'none' for cross-site cookies
   }
 }));
 
