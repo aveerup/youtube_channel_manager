@@ -5,32 +5,24 @@ const morgan = require('morgan');
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const connectPgSimple =  require("connect-pg-simple");
-const pg = require("pg");
-const uploadRoutes = require('./routes/upload');
 const path = require('path');
 const fs = require('fs');
+const { pgPool } = require('./db/supabase');
+const connectPgSimple = require("connect-pg-simple");
 
+const uploadRoutes = require('./routes/cloudinaryUpload');
+const youtubeUploadRoutes = require('./routes/youtubeUploadRoute');
+const youtubeChannelDataRoutes = require('./routes/youtubeChannelData');
+const youtubeChannelAnalyticsRoutes = require('./routes/youtubeChannelAnalytics');
+const generateTitleRoute = require('./routes/generateTitleRoute');
+const generateDescriptionRoute = require('./routes/generateDescriptionRoute');
+const generateTagRoute = require('./routes/generateTagRoute');
+const cancelRoute = require('./routes/cancelRoute');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 const PgSession = connectPgSimple(session);
-
-const pgPool = new pg.Pool({
-  connectionString: process.env.SUPABASE_DB_URL, // store in .env
-  ssl: {
-    rejectUnauthorized: false, // needed for Supabase
-  },
-  max: 10, // max number of clients in the pool 
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-
-// Add connection error handling
-pgPool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
 
 const uploadDir = path.join(__dirname, './uploads');
 if (!fs.existsSync(uploadDir)){
@@ -86,30 +78,32 @@ passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: "/auth/google/callback"
-}, (accessToken, refreshToken, profile, done) => {
-  // In a real app, you would save the user to a database
+}, async (accessToken, refreshToken, params, profile, done) => {
   const user = {
     id: profile.id,
     name: profile.displayName,
     email: profile.emails[0].value,
-    photo: profile.photos[0].value
+    photo: profile.photos[0].value,
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expire_date: new Date(Date.now() + (params.expires_in * 1000)) // Convert seconds to milliseconds
   };
+  console.log('expires_in:', params.expires_in);
   
-  pgPool.query(
-    `INSERT INTO public.users (id, name, email, photo) 
-         VALUES ($1, $2, $3, $4) 
+  await pgPool.query(
+    `INSERT INTO public.users (id, name, email, photo, access_token, refresh_token, expire_date) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7) 
      ON CONFLICT (id) 
      DO UPDATE 
      SET name = EXCLUDED.name, 
          email = EXCLUDED.email, 
-         photo = EXCLUDED.photo 
-         RETURNING *`,
-    [user.id, user.name, user.email, user.photo]
-  ).then(res => {
-    console.log("User upserted:", res.rows[0]);
-  }).catch(err => {
-    console.error("Error upserting user:", err);
-  });
+         photo = EXCLUDED.photo,
+         access_token = EXCLUDED.access_token,
+         refresh_token = EXCLUDED.refresh_token,
+         expire_date = EXCLUDED.expire_date 
+     RETURNING *`,
+    [user.id, user.name, user.email, user.photo, user.access_token, user.refresh_token, user.expire_date]
+  );
   
   return done(null, user);
 }));
@@ -138,11 +132,18 @@ app.get('/', (req, res) => {
 
 // Auth routes
 app.get('/auth/google',
-  passport.authenticate('google', { scope: [
-    'profile', 
-    'email',
-    'https://www.googleapis.com/auth/youtube.upload'
-  ] })
+  passport.authenticate('google', { 
+    scope: [
+      'profile', 
+      'email',
+      'https://www.googleapis.com/auth/youtube.upload',
+      'https://www.googleapis.com/auth/youtube',
+      'https://www.googleapis.com/auth/yt-analytics.readonly',
+      'https://www.googleapis.com/auth/youtube.readonly'
+    ],
+    accessType: 'offline',
+    prompt: 'consent'
+  })
 );
 
 app.get('/auth/google/callback',
@@ -173,21 +174,14 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
-app.get("/test", async (req, res) => {
-  try {
-    const result = await pgPool.query("SELECT * FROM session");
-    res.json({ 
-      success: true, 
-      sessionCount: result.rows[0].count,
-      sessionID: req.sessionID 
-    });
-  } catch (err) {
-    console.error("Session table error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
+app.use('/api', youtubeUploadRoutes);
 app.use('/api', uploadRoutes);
+app.use('/api', cancelRoute);
+app.use('/api', youtubeChannelDataRoutes);
+app.use('/api', youtubeChannelAnalyticsRoutes);
+app.use('/api', generateTitleRoute);
+app.use('/api', generateDescriptionRoute);
+app.use('/api', generateTagRoute);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

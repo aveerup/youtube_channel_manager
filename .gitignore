@@ -42,4 +42,4 @@ ehthumbs.db
 Thumbs.db
 
 # Temporary upload directory
-Backend/uploads/
+Backend/uploads/*

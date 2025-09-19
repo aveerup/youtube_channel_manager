@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './components/Dashboard';
-import './App.css';
+import './output.css';
 
 // Configure axios defaults
 axios.defaults.withCredentials = true;
@@ -39,16 +39,18 @@ function App() {
 
   if (loading) {
     return (
-      <div className="App">
-        <div className="loading">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="App">
+    <div className="min-h-screen bg-gray-100">
       {user ? (
-        <Dashboard user={user} onLogout={handleLogout} />
+        <>
+          <Dashboard user={user} onLogout={handleLogout} />
+        </>
       ) : (
         <LoginScreen />
       )}

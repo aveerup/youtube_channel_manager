@@ -46,7 +46,7 @@ const generateDescription = async (audioUrl, duration) => {
     }
 
     console.log("Combined description before final generation:", description);
-    description = await generateText(description, "Generate a detailed YouTube video description for a video that talks about the above topics. only the description is needed.");
+    description = await generateText(description, "Generate a detailed YouTube video description for a video that talks about the above topics. If possible include different timestamps of the video based on topic. only the description is needed.");
 
     return description;
 }

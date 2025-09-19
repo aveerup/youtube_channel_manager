@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require("@google/genai");
 
-const ai = new GoogleGenAI({ apiKey: 'AIzaSyAN7ZPcmFsKdDeBKTIdd2iPynrQDatdK5I' });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const generateText = async (transcription, prompt) => {
   try {

@@ -4,13 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
-const { createClient } = require('@supabase/supabase-js');
-const {extractAudioUrl} = require('./extractAudio.js');
-const {transcribeVideo} = require('./transcribe.js');
-const {generateText} = require('./textGenerationGemini.js');
-const {generateTitle} = require('./generateTitle.js');
-const { generateDescription } = require('./generateDescription.js');
-const { generateKeyWords } = require('./generateKeyWords.js');
+const { pgPool } = require('../db/supabase.js');
+const { extractAudioUrl } = require('../helperFunctions/extractAudio.js');
+const { generateTitle } = require('../helperFunctions/generateTitle.js');
+const { generateDescription } = require('../helperFunctions/generateDescription.js');
+const { generateKeyWords } = require('../helperFunctions/generateKeyWords.js');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -18,12 +16,6 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
 
 // Configure multer for temporary storage
 const storage = multer.diskStorage({
@@ -61,48 +53,44 @@ router.post('/upload', upload.single('video'), async (req, res) => {
       folder: 'youtube_agent_videos'
     });
 
+    console.log(cloudinaryResult);
+
     // Delete local file
     fs.unlink(req.file.path, (err) => {
       if (err) console.error('Error deleting local file:', err);
     });
 
-    const audioUrl = extractAudioUrl(cloudinaryResult.public_id); // For testing
+    const audioUrl = extractAudioUrl(cloudinaryResult.public_id);
     
-    const title = await generateTitle(audioUrl, cloudinaryResult.duration * 1000); // duration in ms
+    const title = await generateTitle(audioUrl, cloudinaryResult.duration * 1000);
     const description = await generateDescription(audioUrl, cloudinaryResult.duration * 1000);
     const keyWords = await generateKeyWords(audioUrl, cloudinaryResult.duration * 1000);
-    // const transcription = await transcribeVideo(audioUrl);
-
-    // console.log("Transcription Result:", transcription); // For testing
-
-    // const title = await generateText(transcription, "Generate a concise and catchy YouTube video title for the above transcription");
-    // const description = await generateText(transcription, "Generate a detailed YouTube video description for the above transcription");
     
-    console.log("Generated Title:", title); // For testing
-    // console.log("Generated Description:", description); // For testing
-    // console.log(req); // Check if user info is available
+    // Store video info using pgPool
+    const result = await pgPool.query(
+      `INSERT INTO videos 
+       ( user_id, title, description, keywords, cloudinary_id, cloudinary_url, duration, created_at) 
+       VALUES 
+       ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING *`,
+      [
+        req.user.id,
+        title,
+        description,
+        keyWords,
+        cloudinaryResult.public_id,
+        cloudinaryResult.secure_url,
+        cloudinaryResult.duration
+      ]
+    );
 
-    // Store video info in Supabase
-    const { data, error } = await supabase
-      .from('videos')
-      .insert([
-        {
-          user_id: req.user.id, // Assuming you have user info from auth
-          title: req.file.originalname,
-          cloudinary_id: cloudinaryResult.public_id,
-          cloudinary_url: cloudinaryResult.secure_url,
-          duration: cloudinaryResult.duration,
-        }
-      ])
-      .select();
-
-    if (error) throw error;
+    const insertedVideo = result.rows[0];
 
     res.json({
       message: 'File uploaded successfully',
       video: {
         url: cloudinaryResult.secure_url,
-        ...data[0]
+        ...insertedVideo,
       }
     });
 

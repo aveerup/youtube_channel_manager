@@ -11,7 +11,7 @@ const generateKeyWords = async (audioUrl, duration) => {
         for(let i=1; i<=5; i++){
             // Call Gemini API with transcription and timeStamp*i
             let transcriptionSegment = await transcribeVideo(audioUrl, i*timeStamp - 60000, i*timeStamp);
-            keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format.");
+            keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format. no full stops.");
         }   
 
         keyWords += ",";
@@ -22,7 +22,7 @@ const generateKeyWords = async (audioUrl, duration) => {
         for (let i=1; i<=3; i++){
             // Call Gemini API with transcription and timeStamp*i
             let transcriptionSegment = await transcribeVideo(audioUrl, i*timeStamp - 60000, i*timeStamp);
-            keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format.");        
+            keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format. no full stops.");        
             
             console.log("Transcription Segment:", transcriptionSegment);
             console.log("description Segment:", keyWords);
@@ -33,15 +33,15 @@ const generateKeyWords = async (audioUrl, duration) => {
         let timeStamp = Math.floor(duration/2);
 
         let transcriptionSegment = await transcribeVideo(audioUrl, 0, timeStamp);
-        keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format.");
+        keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format. no full stops.");
         keyWords += ",";
         
         transcriptionSegment = await transcribeVideo(audioUrl, timeStamp, duration);
-        keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format.");
+        keyWords += await generateText(transcriptionSegment, "Give me the keywords related to the above segment in comma separated format. no full stops.");
     
     }else{
         let transcription = await transcribeVideo(audioUrl, 0, duration);
-        keyWords += await generateText(transcription, "Give me the keywords related to the above segment in comma separated format.");
+        keyWords += await generateText(transcription, "Give me the keywords related to the above segment in comma separated format. no full stops.");
     }
 
     console.log("Combined keyWords:", keyWords);
